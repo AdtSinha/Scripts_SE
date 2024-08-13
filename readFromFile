@@ -1,0 +1,56 @@
+const ExcelJS = require('exceljs');
+const mongoose = require('mongoose');
+const { MongoClient } = require('mongodb');
+const { aofKeyMapper } = require('.\/aofMapper');
+const { getAof } = require('./aof');
+
+const uri = 'mongodb://AditiSinha:PIKw1l8JT4*o@docdb-cluster-stage.cluster-c8ngwnlcp72k.us-east-1.docdb.amazonaws.com:27017/?authMechanism=DEFAULT&authSource=admin&tls=true&retryWrites=false&tlsCAFile=C%3A%5CMobile+Governance%5CSEBackend-MySchneider-Utils%5Csrc%5Cmongo%5Ccertificate.pem';
+
+const connectToDatabase = async () => {
+    const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
+    await client.connect();
+    return client;
+  };
+
+async function readFromFile() {
+    client = await connectToDatabase();
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.readFile('C:\\Users\\SESA710455\\Documents\\language_script\\Arabic_Translation.xlsx');
+    const worksheet = workbook.getWorksheet(1);
+    
+    worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+    //   if (rowNumber !== 1) {
+        const title = row.getCell(1).value;
+        const areaOfFocus = row.getCell(2).value;
+        const translatedAreaOfFocus = row.getCell(4).value;
+  
+        const matchingObject = aofKeyMapper.find(obj => obj.title === title && obj.areaOfFocus === areaOfFocus);
+        if (matchingObject) {
+          matchingObject.areaOfFocus = translatedAreaOfFocus;
+        }
+     // }
+    });
+  
+   // console.log(aofKeyMapper);
+
+   // const updateAOF = insertModifiedAof(aofKeyMapper,client)
+    //console.log('update result ',updateAOF) 
+
+    const updateAOF = getAof(aofKeyMapper)
+  }
+
+  const insertModifiedAof = async (getModifiedBaseCountry, client) => {
+    try {
+      const database = client.db('commonDB');
+      const collection = database.collection('areaOfFocus');
+      const insertResult = await collection.insertMany(getModifiedBaseCountry);
+      console.log(`${insertResult.insertedCount} documents were inserted into the collection`);
+      return insertResult.insertedCount;
+    } catch (error) {
+      console.error('Error inserting modified profiles:', error);
+      return 0;
+    }
+  };
+  
+
+module.exports = { readFromFile };
